@@ -1,5 +1,7 @@
 package com.fitnessclub.repository;
+
 import com.fitnessclub.model.FitnessClass;
+
 import java.util.List;
 import java.util.Optional;
 

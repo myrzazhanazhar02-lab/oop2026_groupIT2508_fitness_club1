@@ -1,4 +1,5 @@
 package com.fitnessclub.db;
+
 public enum GymConfig {
     INSTANCE;
 

@@ -1,6 +1,7 @@
 package com.fitnessclub.model;
 
 import java.time.LocalDateTime;
+
 public class ClassBooking {
     private final Integer id;
     private final Integer memberId;

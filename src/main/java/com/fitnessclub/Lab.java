@@ -1,4 +1,5 @@
 package com.fitnessclub;
+
 import com.fitnessclub.db.GymConfig;
 import com.fitnessclub.db.SchemaInitializer;
 import com.fitnessclub.exception.InvalidInputException;
@@ -23,7 +24,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Scanner;
 
-public class Main {
+public class Lab {
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter DATE_TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
@@ -188,4 +189,3 @@ public class Main {
         }
     }
 }
-
