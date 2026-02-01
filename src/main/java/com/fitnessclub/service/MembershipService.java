@@ -81,4 +81,18 @@ public class MembershipService {
             throw new InvalidInputException(message);
         }
     }
+    public List<Member> getActiveMembers() {
+    return memberRepository.findAll().stream()
+            .filter(m -> m.getMembershipEndDate() != null)
+            .filter(m -> m.getMembershipEndDate().isAfter(LocalDate.now()))
+            .toList();
+}
+
+public List<Member> getMembersSortedByEndDate() {
+    return memberRepository.findAll().stream()
+            .filter(m -> m.getMembershipEndDate() != null)
+            .sorted((m1, m2) -> m1.getMembershipEndDate().compareTo(m2.getMembershipEndDate()))
+            .toList();
+}
+
 }
