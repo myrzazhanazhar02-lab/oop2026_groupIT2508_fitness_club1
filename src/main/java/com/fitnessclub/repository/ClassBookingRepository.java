@@ -4,7 +4,7 @@ import com.fitnessclub.model.ClassBooking;
 
 import java.util.List;
 
-public interface ClassBookingRepository extends Repository<ClassBooking, Integer> {
+public interface  ClassBookingRepository extends Repository<ClassBooking, Integer> {
 
     ClassBooking create(int memberId, int classId);
 
