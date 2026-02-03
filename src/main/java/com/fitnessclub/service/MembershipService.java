@@ -4,11 +4,15 @@ import com.fitnessclub.exception.InvalidInputException;
 import com.fitnessclub.exception.NotFoundException;
 import com.fitnessclub.model.Member;
 import com.fitnessclub.model.MembershipType;
+import com.fitnessclub.model.MembershipTypeBuilder;
+import com.fitnessclub.model.MembershipTypeFactory;
 import com.fitnessclub.repository.MemberRepository;
 import com.fitnessclub.repository.MembershipTypeRepository;
 
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class MembershipService {
     private final MemberRepository memberRepository;
@@ -36,6 +40,29 @@ public class MembershipService {
                 membershipTypeId, endDate);
         notificationService.send("New member created: " + member.getName());
         return member;
+    }
+
+    public List<Member> findActiveMembersToday() {
+        return memberRepository.findActiveOn(LocalDate.now())
+                .stream()
+                .sorted(Comparator.comparing(Member::getMembershipEndDate))
+                .collect(Collectors.toList());
+    }
+
+    public MembershipType createMembershipType(String name, int durationDays, double price, Integer visitLimit) {
+        validateString(name, "Name is required");
+        MembershipType type = new MembershipTypeBuilder()
+                .withName(name.trim())
+                .withDurationDays(durationDays)
+                .withPrice(price)
+                .withVisitLimit(visitLimit)
+                .build();
+        return membershipTypeRepository.create(type);
+    }
+
+    public MembershipType createMonthlyUnlimited(String displayName, double price) {
+        MembershipType type = MembershipTypeFactory.unlimitedMonthly(displayName, price);
+        return membershipTypeRepository.create(type);
     }
 
     public Member buyMembership(int memberId, int membershipTypeId) {

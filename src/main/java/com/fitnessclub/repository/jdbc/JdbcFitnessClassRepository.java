@@ -23,7 +23,35 @@ public class JdbcFitnessClassRepository implements FitnessClassRepository {
     }
 
     @Override
-    public Optional<FitnessClass> findById(int id) {
+    public FitnessClass create(FitnessClass fitnessClass) {
+        String sql = """
+                INSERT INTO classes(name, capacity, start_time)
+                VALUES (?, ?, ?)
+                RETURNING id, start_time
+                """;
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, fitnessClass.getName());
+            ps.setInt(2, fitnessClass.getCapacity());
+            ps.setObject(3, fitnessClass.getStartTime());
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return new FitnessClass(
+                            rs.getInt("id"),
+                            fitnessClass.getName(),
+                            fitnessClass.getCapacity(),
+                            rs.getObject("start_time", OffsetDateTime.class).toLocalDateTime()
+                    );
+                }
+            }
+            throw new SQLException("Insert failed");
+        } catch (SQLException e) {
+            throw new IllegalStateException("Failed to create class", e);
+        }
+    }
+
+    @Override
+    public Optional<FitnessClass> findById(Integer id) {
         String sql = "SELECT * FROM classes WHERE id = ?";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {

@@ -13,12 +13,18 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class JdbcClassBookingRepository implements ClassBookingRepository {
     private final Database database;
 
     public JdbcClassBookingRepository(Database database) {
         this.database = database;
+    }
+
+    @Override
+    public ClassBooking create(ClassBooking booking) {
+        return create(booking.getMemberId(), booking.getClassId());
     }
 
     @Override
@@ -45,6 +51,39 @@ public class JdbcClassBookingRepository implements ClassBookingRepository {
             throw new SQLException("Insert failed");
         } catch (SQLException e) {
             throw new IllegalStateException("Failed to create booking", e);
+        }
+    }
+
+    @Override
+    public Optional<ClassBooking> findById(Integer id) {
+        String sql = "SELECT * FROM class_bookings WHERE id = ?";
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(map(rs));
+                }
+                return Optional.empty();
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("Failed to fetch booking by id", e);
+        }
+    }
+
+    @Override
+    public List<ClassBooking> findAll() {
+        String sql = "SELECT * FROM class_bookings ORDER BY booked_at DESC";
+        try (Connection conn = database.getConnection();
+             Statement st = conn.createStatement();
+             ResultSet rs = st.executeQuery(sql)) {
+            List<ClassBooking> result = new ArrayList<>();
+            while (rs.next()) {
+                result.add(map(rs));
+            }
+            return result;
+        } catch (SQLException e) {
+            throw new IllegalStateException("Failed to load bookings", e);
         }
     }
 
@@ -89,17 +128,21 @@ public class JdbcClassBookingRepository implements ClassBookingRepository {
             try (ResultSet rs = ps.executeQuery()) {
                 List<ClassBooking> result = new ArrayList<>();
                 while (rs.next()) {
-                    result.add(new ClassBooking(
-                            rs.getInt("id"),
-                            rs.getInt("member_id"),
-                            rs.getInt("class_id"),
-                            rs.getObject("booked_at", OffsetDateTime.class).toLocalDateTime()
-                    ));
+                    result.add(map(rs));
                 }
                 return result;
             }
         } catch (SQLException e) {
             throw new IllegalStateException("Failed to fetch bookings", e);
         }
+    }
+
+    private ClassBooking map(ResultSet rs) throws SQLException {
+        return new ClassBooking(
+                rs.getInt("id"),
+                rs.getInt("member_id"),
+                rs.getInt("class_id"),
+                rs.getObject("booked_at", OffsetDateTime.class).toLocalDateTime()
+        );
     }
 }

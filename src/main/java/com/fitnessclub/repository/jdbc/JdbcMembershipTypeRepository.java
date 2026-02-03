@@ -21,7 +21,41 @@ public class JdbcMembershipTypeRepository implements MembershipTypeRepository {
     }
 
     @Override
-    public Optional<MembershipType> findById(int id) {
+    public MembershipType create(MembershipType type) {
+        String sql = """
+                INSERT INTO membership_types(name, duration_days, price, visit_limit)
+                VALUES (?, ?, ?, ?)
+                RETURNING id
+                """;
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, type.getName());
+            ps.setInt(2, type.getDurationDays());
+            ps.setDouble(3, type.getPrice());
+            if (type.getVisitLimit() == null) {
+                ps.setNull(4, java.sql.Types.INTEGER);
+            } else {
+                ps.setInt(4, type.getVisitLimit());
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return new MembershipType(
+                            rs.getInt("id"),
+                            type.getName(),
+                            type.getDurationDays(),
+                            type.getPrice(),
+                            type.getVisitLimit()
+                    );
+                }
+            }
+            throw new SQLException("Insert did not return id");
+        } catch (SQLException e) {
+            throw new IllegalStateException("Failed to create membership type", e);
+        }
+    }
+
+    @Override
+    public Optional<MembershipType> findById(Integer id) {
         String sql = "SELECT * FROM membership_types WHERE id = ?";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {

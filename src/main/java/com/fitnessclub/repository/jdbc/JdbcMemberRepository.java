@@ -24,6 +24,11 @@ public class JdbcMemberRepository implements MemberRepository {
     }
 
     @Override
+    public Member create(Member member) {
+        return create(member.getName(), member.getEmail(), member.getPhone(), member.getMembershipTypeId(), member.getMembershipEndDate());
+    }
+
+    @Override
     public Member create(String name, String email, String phone, Integer membershipTypeId, LocalDate membershipEndDate) {
         String sql = """
                 INSERT INTO members(name, email, phone, membership_type_id, membership_end_date)
@@ -60,7 +65,7 @@ public class JdbcMemberRepository implements MemberRepository {
     }
 
     @Override
-    public Optional<Member> findById(int id) {
+    public Optional<Member> findById(Integer id) {
         String sql = "SELECT * FROM members WHERE id = ?";
         try (Connection conn = database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -89,6 +94,29 @@ public class JdbcMemberRepository implements MemberRepository {
             return result;
         } catch (SQLException e) {
             throw new IllegalStateException("Failed to fetch members", e);
+        }
+    }
+
+    @Override
+    public List<Member> findActiveOn(LocalDate date) {
+        String sql = """
+                SELECT * FROM members
+                WHERE membership_end_date IS NOT NULL
+                  AND membership_end_date >= ?
+                ORDER BY membership_end_date DESC
+                """;
+        try (Connection conn = database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setObject(1, date);
+            try (ResultSet rs = ps.executeQuery()) {
+                List<Member> result = new ArrayList<>();
+                while (rs.next()) {
+                    result.add(map(rs));
+                }
+                return result;
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("Failed to fetch active members", e);
         }
     }
 
