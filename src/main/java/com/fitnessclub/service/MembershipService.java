@@ -8,9 +8,15 @@ import com.fitnessclub.repository.MemberRepository;
 import com.fitnessclub.repository.MembershipTypeRepository;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.ArrayList;
+import com.fitnessclub.service.Filter;
+
 
 public class MembershipService {
+
     private final MemberRepository memberRepository;
     private final MembershipTypeRepository membershipTypeRepository;
     private final NotificationService notificationService;
@@ -26,14 +32,22 @@ public class MembershipService {
     public Member createMember(String name, String email, String phone, Integer membershipTypeId) {
         validateString(name, "Name is required");
         validateString(email, "Email is required");
+
         LocalDate endDate = null;
         if (membershipTypeId != null) {
             MembershipType type = membershipTypeRepository.findById(membershipTypeId)
                     .orElseThrow(() -> new NotFoundException("Membership type not found: " + membershipTypeId));
             endDate = LocalDate.now().plusDays(type.getDurationDays());
         }
-        Member member = memberRepository.create(name.trim(), email.trim(), phone == null ? null : phone.trim(),
-                membershipTypeId, endDate);
+
+        Member member = memberRepository.create(
+                name.trim(),
+                email.trim(),
+                phone == null ? null : phone.trim(),
+                membershipTypeId,
+                endDate
+        );
+
         notificationService.send("New member created: " + member.getName());
         return member;
     }
@@ -41,10 +55,13 @@ public class MembershipService {
     public Member buyMembership(int memberId, int membershipTypeId) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new NotFoundException("Member not found: " + memberId));
+
         MembershipType type = membershipTypeRepository.findById(membershipTypeId)
                 .orElseThrow(() -> new NotFoundException("Membership type not found: " + membershipTypeId));
+
         LocalDate newEndDate = LocalDate.now().plusDays(type.getDurationDays());
         Member updated = memberRepository.updateMembership(member.getId(), type.getId(), newEndDate);
+
         notificationService.send("Membership purchased for " + member.getName() + " until " + newEndDate);
         return updated;
     }
@@ -52,13 +69,18 @@ public class MembershipService {
     public Member extendMembership(int memberId, int membershipTypeId) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new NotFoundException("Member not found: " + memberId));
+
         MembershipType type = membershipTypeRepository.findById(membershipTypeId)
                 .orElseThrow(() -> new NotFoundException("Membership type not found: " + membershipTypeId));
-        LocalDate startDate = member.getMembershipEndDate() != null && member.getMembershipEndDate().isAfter(LocalDate.now())
-                ? member.getMembershipEndDate()
-                : LocalDate.now();
+
+        LocalDate startDate =
+                member.getMembershipEndDate() != null && member.getMembershipEndDate().isAfter(LocalDate.now())
+                        ? member.getMembershipEndDate()
+                        : LocalDate.now();
+
         LocalDate newEndDate = startDate.plusDays(type.getDurationDays());
         Member updated = memberRepository.updateMembership(member.getId(), type.getId(), newEndDate);
+
         notificationService.send("Membership extended for " + member.getName() + " until " + newEndDate);
         return updated;
     }
@@ -76,23 +98,40 @@ public class MembershipService {
                 .orElseThrow(() -> new NotFoundException("Member not found: " + id));
     }
 
+    public List<Member> getActiveMembers() {
+        return filterList(
+                memberRepository.findAll(),
+                m -> m.getMembershipEndDate() != null
+                        && m.getMembershipEndDate().isAfter(LocalDate.now())
+        );
+    }
+
+
+    public List<Member> getMembersSortedByEndDate() {
+        List<Member> filtered = filterList(
+                memberRepository.findAll(),
+                m -> m.getMembershipEndDate() != null
+        );
+
+        filtered.sort(Comparator.comparing(Member::getMembershipEndDate));
+        return filtered;
+    }
+
+    public <T> List<T> filterList(List<T> items, Filter<T> filter) {
+        List<T> result = new ArrayList<>();
+        for (T item : items) {
+            if (filter.test(item)) {
+                result.add(item);
+            }
+        }
+        return result;
+    }
+
     private void validateString(String value, String message) {
         if (value == null || value.trim().isEmpty()) {
             throw new InvalidInputException(message);
         }
     }
-    public List<Member> getActiveMembers() {
-    return memberRepository.findAll().stream()
-            .filter(m -> m.getMembershipEndDate() != null)
-            .filter(m -> m.getMembershipEndDate().isAfter(LocalDate.now()))
-            .toList();
-}
-
-public List<Member> getMembersSortedByEndDate() {
-    return memberRepository.findAll().stream()
-            .filter(m -> m.getMembershipEndDate() != null)
-            .sorted((m1, m2) -> m1.getMembershipEndDate().compareTo(m2.getMembershipEndDate()))
-            .toList();
-}
 
 }
+
